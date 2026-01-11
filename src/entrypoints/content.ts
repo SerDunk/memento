@@ -1,10 +1,32 @@
 import { browser } from "wxt/browser";
 import { mountBookmarkUI } from "../ui/content-ui";
+import { getConversationId } from "@/util/helper";
+import { Bookmark } from "@/util/types";
+import { getStore, setStore } from "@/util/storage";
 
 export default defineContentScript({
   matches: ["https://chatgpt.com/*"],
   main() {
     console.log("Context script has been loaded into ChatGPT");
+
+    (async function markChatAsSeen() {
+      const chatId = getConversationId();
+
+      if (!chatId) return;
+
+      const store = await getStore();
+
+      if (!store[chatId]) {
+        store[chatId] = {
+          bookmarks: [],
+          lastSeenAt: Date.now(),
+        };
+      } else {
+        store[chatId].lastSeenAt = Date.now();
+      }
+
+      await setStore(store);
+    })();
 
     //React Entry Point
     function mountReactUI() {
@@ -56,21 +78,36 @@ export default defineContentScript({
         button.addEventListener("click", async () => {
           const text = response.textContent;
 
-          const bookmark = {
+          //Get Conversation Id
+          const activeConversationId = getConversationId();
+
+          if (!activeConversationId) {
+            return;
+          }
+
+          const store = await getStore();
+
+          if (!store[activeConversationId]) {
+            store[activeConversationId] = {
+              bookmarks: [],
+              lastSeenAt: Date.now(),
+            };
+          }
+
+          const exists = store[activeConversationId].bookmarks.some(
+            (bm) => bm.responseId == response.id
+          );
+
+          if (exists) return;
+
+          store[activeConversationId].bookmarks.push({
             id: crypto.randomUUID(),
             text,
             createdAt: Date.now(),
             responseId: response.id,
-          };
+          });
 
-          const result = await browser.storage.local.get("bookmarks");
-          const bookmarks = result.bookmarks || [];
-
-          bookmarks.push(bookmark);
-
-          await browser.storage.local.set({ bookmarks });
-
-          console.log("Saved your bookmark", bookmark);
+          await setStore(store);
         });
 
         response.prepend(button);
