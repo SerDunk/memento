@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { browser } from "wxt/browser";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { Bookmark } from "@/util/types";
 import { getConversationId } from "@/util/helper";
@@ -65,59 +65,67 @@ function BookmarkApp() {
 
   return (
     <>
-      <button
+      <motion.button
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.95 }}
+        className="fixed bottom-5 right-5 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 flex items-center justify-center text-2xl cursor-pointer border-none"
         onClick={() => openPanel()}
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: "50%",
-          background: "#4f46e5",
-          color: "white",
-          border: "none",
-          cursor: "pointer",
-          fontSize: 20,
-        }}
       >
         📌
-      </button>
+      </motion.button>
 
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 60,
-            right: 0,
-            width: 320,
-            maxHeight: 400,
-            background: "white",
-            borderRadius: 8,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-            padding: 10,
-            overflowY: "auto",
-          }}
-        >
-          <h4 style={{ color: "#000" }}>AI Bookmarks</h4>
-
-          {bookmarks.length === 0 && <p>No Bookmarks Yet</p>}
-
-          {bookmarks.map((bm, i) => (
-            <div
-              key={bm.id}
-              onClick={() => jumpTo(bm)}
-              style={{
-                color: "#000",
-                borderBottom: "1px solid #0000",
-                padding: "6px 0",
-                cursor: "pointer",
-                fontSize: 12,
-              }}
-            >
-              <strong>#{i + 1}</strong>
-              <div>{bm.text.slice(0, 100)}...</div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-20 right-5 w-80 max-h-96 bg-white rounded-lg shadow-2xl overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 font-semibold text-lg">
+              📚 AI Bookmarks
             </div>
-          ))}
-        </div>
-      )}
+
+            <div className="p-4 overflow-y-auto max-h-80">
+              {bookmarks.length === 0 && (
+                <p className="text-gray-500 text-center py-8">
+                  No bookmarks yet
+                </p>
+              )}
+
+              {bookmarks.map((bm, i) => (
+                <motion.div
+                  key={bm.id}
+                  whileHover={{ backgroundColor: "#f3f4f6" }}
+                  onClick={() => jumpTo(bm)}
+                  className="py-3 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="font-bold text-blue-600 text-sm">
+                      #{i + 1}
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-gray-800 text-sm line-clamp-2">
+                        {bm.text.slice(0, 100)}...
+                      </p>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteBookmark(bm.id);
+                        }}
+                        className="text-red-500 text-xs mt-1 hover:text-red-700 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

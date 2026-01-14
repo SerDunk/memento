@@ -1,8 +1,8 @@
-import { browser } from "wxt/browser";
 import { mountBookmarkUI } from "../ui/content-ui";
 import { getConversationId } from "@/util/helper";
-import { Bookmark } from "@/util/types";
 import { getStore, setStore } from "@/util/storage";
+import tailwindStyles from "../ui/tailwind-inline";
+import "./tailwind.css";
 
 export default defineContentScript({
   matches: ["https://chatgpt.com/*"],
@@ -42,6 +42,12 @@ export default defineContentScript({
       document.body.appendChild(host);
 
       const shadowRoot = host.attachShadow({ mode: "open" });
+
+      // Inject Tailwind styles into shadow DOM
+      const style = document.createElement("style");
+      style.textContent = tailwindStyles;
+      shadowRoot.appendChild(style);
+
       const container = document.createElement("div");
       shadowRoot.appendChild(container);
 
