@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
-import { Bookmark } from "@/util/types";
+import { useState, useEffect } from "react";
+import { Bookmark, BookmarkStore } from "@/util/types";
 import { getConversationId } from "@/util/helper";
 import { getStore, setStore } from "@/util/storage";
 import { cleanupOldChats } from "@/util/cleanup";
@@ -9,6 +9,37 @@ import { cleanupOldChats } from "@/util/cleanup";
 function BookmarkApp() {
   const [open, setOpen] = useState(false);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+
+  //Get new bookmarks on instant change
+  useEffect(() => {
+    function handleStorageChange(
+      changes: {
+        [key: string]: {
+          oldValue?: unknown;
+          newValue?: unknown;
+        };
+      },
+      areaName: "local" | "sync" | "managed" | "session"
+    ) {
+      if (areaName !== "local") return;
+
+      const change = changes.bookmarkStore;
+      if (!change?.newValue) return;
+
+      const activeConversationId = getConversationId();
+      if (!activeConversationId) return;
+
+      const store = change.newValue as BookmarkStore;
+
+      setBookmarks(store[activeConversationId]?.bookmarks ?? []);
+    }
+
+    browser.storage.onChanged.addListener(handleStorageChange);
+
+    return () => {
+      browser.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, []);
 
   //Navigate to Chat Message
   function jumpTo(bm: Bookmark) {
@@ -25,7 +56,7 @@ function BookmarkApp() {
       return;
     }
 
-    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    element.scrollIntoView({ behavior: "smooth", block: "start" });
 
     setTimeout(() => (element.style.backgroundColor = ""), 1200);
   }
@@ -68,7 +99,7 @@ function BookmarkApp() {
       <motion.button
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-5 right-5 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 flex items-center justify-center text-2xl cursor-pointer border-none"
+        className="fixed bottom-5 right-5 w-12 h-12 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 flex items-center justify-center text-2xl cursor-pointer border-none"
         onClick={() => openPanel()}
       >
         📌
@@ -83,11 +114,7 @@ function BookmarkApp() {
             transition={{ duration: 0.2 }}
             className="fixed bottom-20 right-5 w-80 max-h-96 bg-white rounded-lg shadow-2xl overflow-hidden"
           >
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 font-semibold text-lg">
-              📚 AI Bookmarks
-            </div>
-
-            <div className="p-4 overflow-y-auto max-h-80">
+            <div className="p-2  overflow-y-auto max-h-80">
               {bookmarks.length === 0 && (
                 <p className="text-gray-500 text-center py-8">
                   No bookmarks yet
@@ -101,24 +128,21 @@ function BookmarkApp() {
                   onClick={() => jumpTo(bm)}
                   className="py-3 cursor-pointer transition-colors"
                 >
-                  <div className="flex items-start gap-2">
-                    <span className="font-bold text-blue-600 text-sm">
-                      #{i + 1}
-                    </span>
-                    <div className="flex-1">
+                  <div className="flex justify-between gap-2 px-3">
+                    <div>
                       <p className="text-gray-800 text-sm line-clamp-2">
-                        {bm.text.slice(0, 100)}...
+                        {bm.text.slice(1, 40)}...
                       </p>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteBookmark(bm.id);
-                        }}
-                        className="text-red-500 text-xs mt-1 hover:text-red-700 hover:underline"
-                      >
-                        Delete
-                      </button>
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteBookmark(bm.id);
+                      }}
+                      className="text-red-500 text-sm hover:text-red-700 hover:underline"
+                    >
+                      X
+                    </button>
                   </div>
                 </motion.div>
               ))}

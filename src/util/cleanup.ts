@@ -1,6 +1,6 @@
 import { BookmarkStore } from "./types";
 
-const TTL_DAYS = 1;
+const TTL_DAYS = 2;
 const TTL_MS = TTL_DAYS * 24 * 60 * 60 * 1000;
 
 export function cleanupOldChats(store: BookmarkStore): BookmarkStore {
